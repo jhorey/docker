@@ -143,16 +143,47 @@ func (p Port) Proto() string {
 	return parts[1]
 }
 
-func (p Port) Port() string {
+func (p Port) RawPort() string {
 	return strings.Split(string(p), "/")[0]
 }
 
+func (p Port) Port() string {
+	ports := p.Ports()
+	return ports[0]
+}
+
 func (p Port) Int() int {
-	i, err := parsePort(p.Port())
+	pstart, _ := p.PortRange()
+	return pstart
+}
+
+func (p Port) Ports() []string {
+	rawPort := p.RawPort()	
+	if strings.Contains(rawPort, "-") {
+		return strings.Split(rawPort, "-")
+	} else {
+		ports := []string{rawPort}
+		return ports
+	}
+}
+
+func (p Port) PortRange() (int, int) {
+	rawPorts := p.Ports()
+	start, err := parsePort(rawPorts[0])
 	if err != nil {
 		panic(err)
 	}
-	return i
+
+	if len(rawPorts) > 1 {
+		end, err := parsePort(rawPorts[1])
+		if err != nil {
+			panic(err)
+		}
+
+		return start, end
+	} else {
+		return start, start
+	}
 }
 
 func NewPort(proto, port string) Port {
