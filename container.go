@@ -84,6 +84,7 @@ type Config struct {
 	AttachStderr    bool
 	PortSpecs       []string // Deprecated - Can be in the format of 8080/tcp
 	ExposedPorts    map[Port]struct{}
+	PhysNet         string // Info on secondary network "eth1:10.0.4.10"
 	Tty             bool // Attach standard streams to a tty, including stdin if it is not closed.
 	OpenStdin       bool // Open stdin
 	StdinOnce       bool // If true, close stdin after the 1 attached client disconnects.
@@ -166,6 +167,9 @@ type NetworkSettings struct {
 	IPPrefixLen int
 	Gateway     string
 	Bridge      string
+	PhysNetEnabled  bool
+	PhysNetDevice   string
+	PhysNetAddress  string
 	PortMapping map[string]PortMapping // Deprecated
 	Ports       map[Port][]PortBinding
 }
@@ -518,6 +522,9 @@ func (container *Container) Start() (err error) {
 	} else {
 		if err := container.allocateNetwork(); err != nil {
 			return err
+		}
+		if err := container.bindNetwork(); err != nil {
+		       return err
 		}
 		container.buildHostnameAndHostsFiles(container.NetworkSettings.IPAddress)
 	}
@@ -945,6 +952,20 @@ ff02::2		ip6-allrouters
 	}
 
 	ioutil.WriteFile(container.HostsPath, hostsContent, 0644)
+}
+
+func (container *Container) bindNetwork() error {
+        // Get the bind network string "eth1:addr"
+        if container.Config.PhysNet != "" {
+                var split = strings.Split(container.Config.PhysNet, ":")
+                container.NetworkSettings.PhysNetEnabled = true
+                container.NetworkSettings.PhysNetDevice = split[0]
+                container.NetworkSettings.PhysNetAddress = split[1]
+	} else {
+                container.NetworkSettings.PhysNetEnabled = false
+	}
+
+        return nil
 }
 
 func (container *Container) allocateNetwork() error {

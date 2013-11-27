@@ -1748,6 +1748,7 @@ func parseRun(cmd *flag.FlagSet, args []string, capabilities *Capabilities) (*Co
 		flTty             = cmd.Bool("t", false, "Allocate a pseudo-tty")
 		flContainerIDFile = cmd.String("cidfile", "", "Write the container ID to the file")
 		flEntrypoint      = cmd.String("entrypoint", "", "Overwrite the default entrypoint of the image")
+		flPhysnet         = cmd.String("nb", "", "Network bind")
 		flHostname        = cmd.String("h", "", "Container host name")
 		flMemoryString    = cmd.String("m", "", "Memory limit (format: <number><optional unit>, where unit = b, k, m or g)")
 		flUser            = cmd.String("u", "", "Username or UID")
@@ -1888,6 +1889,7 @@ func parseRun(cmd *flag.FlagSet, args []string, capabilities *Capabilities) (*Co
 		Domainname:      domainname,
 		PortSpecs:       nil, // Deprecated
 		ExposedPorts:    ports,
+		PhysNet:         *flPhysnet,
 		User:            *flUser,
 		Tty:             *flTty,
 		NetworkDisabled: !*flNetwork,

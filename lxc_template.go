@@ -25,6 +25,15 @@ lxc.network.mtu = 1500
 lxc.network.ipv4 = {{.NetworkSettings.IPAddress}}/{{.NetworkSettings.IPPrefixLen}}
 {{end}}
 
+# secondary network configuration used for operational communication
+{{if .NetworkSettings.PhysNetEnabled}}
+lxc.network.type = phys
+lxc.network.flags = up
+lxc.network.link = {{.NetworkSettings.PhysNetDevice}}
+lxc.network.name = eth1
+lxc.network.mtu = 1500
+lxc.network.ipv4 = {{.NetworkSettings.PhysNetAddress}}
+{{end}}
 # root filesystem
 {{$ROOTFS := .RootfsPath}}
 lxc.rootfs = {{$ROOTFS}}
