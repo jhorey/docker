@@ -152,21 +152,6 @@ func (p Port) Port() string {
 	return ports[0]
 }
 
-func (p Port) Int() int {
-	pstart, _ := p.PortRange()
-	return pstart
-}
-
-func (p Port) Ports() []string {
-	rawPort := p.RawPort()	
-	if strings.Contains(rawPort, "-") {
-		return strings.Split(rawPort, "-")
-	} else {
-		ports := []string{rawPort}
-		return ports
-	}
-}
-
 func (p Port) PortRange() (int, int) {
 	rawPorts := p.Ports()
 	start, err := parsePort(rawPorts[0])
@@ -183,6 +168,21 @@ func (p Port) PortRange() (int, int) {
 		return start, end
 	} else {
 		return start, start
+	}
+}
+
+func (p Port) Int() int {
+	pstart, _ := p.PortRange()
+	return pstart
+}
+
+func (p Port) Ports() []string {
+	rawPort := p.RawPort()	
+	if strings.Contains(rawPort, "-") {
+		return strings.Split(rawPort, "-")
+	} else {
+		ports := []string{rawPort}
+		return ports
 	}
 }
 
