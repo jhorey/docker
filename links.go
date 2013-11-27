@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dotcloud/docker/iptables"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -63,6 +64,13 @@ func (l *Link) ToEnv() []string {
 		env = append(env, fmt.Sprintf("%s_PORT_%s_%s_ADDR=%s", alias, p.Port(), strings.ToUpper(p.Proto()), l.ChildIP))
 		env = append(env, fmt.Sprintf("%s_PORT_%s_%s_PORT=%s", alias, p.Port(), strings.ToUpper(p.Proto()), p.Port()))
 		env = append(env, fmt.Sprintf("%s_PORT_%s_%s_PROTO=%s", alias, p.Port(), strings.ToUpper(p.Proto()), p.Proto()))
+
+		// Check if this is a ranged port, if so expose an additional
+		// environment variable to indicate. 
+		pstart, pend := p.PortRange()
+		if pend - pstart > 0 {
+			env = append(env, fmt.Sprintf("%s_PORT_%s_%s_RANGE=%s", alias, p.Port(), strings.ToUpper(p.Proto()), strconv.Itoa(pend - pstart)))
+		}
 	}
 
 	// Load the linked container's name into the environment
@@ -119,29 +127,32 @@ func (l *Link) Disable() {
 }
 
 func (l *Link) toggle(action string, ignoreErrors bool) error {
-	for _, p := range l.Ports {
-		if output, err := iptables.Raw(action, "FORWARD",
-			"-i", l.BridgeInterface, "-o", l.BridgeInterface,
-			"-p", p.Proto(),
-			"-s", l.ParentIP,
-			"--dport", p.Port(),
-			"-d", l.ChildIP,
-			"-j", "ACCEPT"); !ignoreErrors && err != nil {
-			return err
-		} else if len(output) != 0 {
-			return fmt.Errorf("Error toggle iptables forward: %s", output)
-		}
+	for _, prange := range l.Ports {
+		pstart, pend := prange.PortRange()
+		for i := pstart; i <= pend; i++ {
+			if output, err := iptables.Raw(action, "FORWARD",
+				"-i", l.BridgeInterface, "-o", l.BridgeInterface,
+				"-p", prange.Proto(),
+				"-s", l.ParentIP,
+				"--dport", strconv.Itoa(i),
+				"-d", l.ChildIP,
+				"-j", "ACCEPT"); !ignoreErrors && err != nil {
+					return err
+				} else if len(output) != 0 {
+					return fmt.Errorf("Error toggle iptables forward: %s", output)
+				}
 
-		if output, err := iptables.Raw(action, "FORWARD",
-			"-i", l.BridgeInterface, "-o", l.BridgeInterface,
-			"-p", p.Proto(),
-			"-s", l.ChildIP,
-			"--sport", p.Port(),
-			"-d", l.ParentIP,
-			"-j", "ACCEPT"); !ignoreErrors && err != nil {
-			return err
-		} else if len(output) != 0 {
-			return fmt.Errorf("Error toggle iptables forward: %s", output)
+			if output, err := iptables.Raw(action, "FORWARD",
+				"-i", l.BridgeInterface, "-o", l.BridgeInterface,
+				"-p", prange.Proto(),
+				"-s", l.ChildIP,
+				"--sport", strconv.Itoa(i),
+				"-d", l.ParentIP,
+				"-j", "ACCEPT"); !ignoreErrors && err != nil {
+					return err
+				} else if len(output) != 0 {
+					return fmt.Errorf("Error toggle iptables forward: %s", output)
+				}
 		}
 	}
 	return nil
